@@ -1,0 +1,244 @@
+ <!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Idea.world!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #6DE3FF;
+            margin: 1;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .output-box {
+            margin-top: 5px;
+        }
+
+        .comment {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            position: relative; /* For positioning the like button */
+            background-color: #fff;
+        }
+
+        /* Add styling for input and textarea */
+        label, input, textarea {
+            display: block;
+            margin-bottom: 10px;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        /* Customize label colors */
+        label {
+            color: #333;
+        }
+
+        /* Style the submit button */
+        input[type="submit"] {
+            background-color: #0074d9;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        /* Style the like button */
+        .like-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .liked {
+            color: red;
+        }
+
+        /* Style for the like count */
+        .like-count {
+            position: absolute;
+            top: 10px;
+            right: 40px;
+        }
+
+        /* Add glow effect on hover for input and textarea */
+        label:hover, input:hover, textarea:hover {
+            box-shadow: 0 0 10px rgba(0, 0, 255, 0.5);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome</h1>
+        <form id="idea-form">
+            <label for="name">Your Name:</label>
+            <input type="text" id="name" name="name" required>
+            <label for="idea">Your Idea:</label>
+            <textarea id="idea" name="idea" rows="4" required></textarea>
+            <input type="submit" value="Submit">
+        </form>
+         <h2>Comments:</h2>
+        <div class="output-box" id="output">
+          
+        </div>
+    </div>
+
+<script>
+    // JavaScript for submitting comments and displaying them
+    const form = document.getElementById("idea-form");
+    const outputBox = document.getElementById("output");
+
+    // Function to toggle the "liked" class when the like button is clicked
+    function toggleLike(button, countElement, commentId) {
+        button.classList.toggle("liked");
+        const increment = button.classList.contains("liked") ? 1 : -1;
+        countElement.textContent = parseInt(countElement.textContent) + increment;
+
+        // Update the liked status and like count in local storage
+        const likedComments = JSON.parse(localStorage.getItem("likedComments")) || {};
+        likedComments[commentId] = {
+            liked: button.classList.contains("liked"),
+            likeCount: countElement.textContent
+        };
+        localStorage.setItem("likedComments", JSON.stringify(likedComments));
+    }
+
+    // Function to delete a comment
+    function deleteComment(commentElement) {
+        outputBox.removeChild(commentElement);
+    }
+
+    // Create a new comment element with a like button and delete button
+    function createCommentElement(commentId, commenter, name, idea, liked, likeCount) {
+        const comment = document.createElement("div");
+        comment.classList.add("comment");
+
+        const likeButton = document.createElement("span");
+        likeButton.classList.add("like-button");
+        likeButton.textContent = liked ? "like" : "Like";
+
+        // Like count
+        const likeCountElement = document.createElement("span");
+        likeCountElement.classList.add("like-count");
+        likeCountElement.textContent = likeCount;
+
+        // Delete button
+        const deleteButton = document.createElement("span");
+        deleteButton.classList.add("delete-button");
+        deleteButton.textContent = "Delete";
+
+        // Add click event to toggle the "liked" class on the like button
+        likeButton.addEventListener("click", function () {
+            toggleLike(likeButton, likeCountElement, commentId);
+        });
+
+        // Add click event to delete the comment (only if the commenter is the same as the person deleting)
+        deleteButton.addEventListener("click", function () {
+            if (commenter === getCurrentUser()) {
+                deleteComment(comment);
+                // Remove the comment from local storage
+                const likedComments = JSON.parse(localStorage.getItem("likedComments")) || {};
+                delete likedComments[commentId];
+                localStorage.setItem("likedComments", JSON.stringify(likedComments));
+            } else {
+                alert("You can only delete your own comments.");
+            }
+        });
+
+        const commentContent = document.createElement("p");
+        commentContent.innerHTML = `<strong>${name}:</strong> ${idea}`;
+
+        comment.appendChild(likeButton);
+        comment.appendChild(likeCountElement);
+        comment.appendChild(deleteButton);
+        comment.appendChild(commentContent);
+
+        return comment;
+    }
+
+    // Function to get the current user (you may replace this with your authentication logic)
+    function getCurrentUser() {
+        // Replace this with your authentication logic
+        return "JohnDoe"; // Example username, you should use the actual username or user ID
+    }
+
+    // Load comments and liked statuses from localStorage on page load
+    window.addEventListener("load", function () {
+        const storedComments = JSON.parse(localStorage.getItem("comments")) || [];
+        const likedComments = JSON.parse(localStorage.getItem("likedComments")) || {};
+
+        storedComments.forEach(comment => {
+            const likedInfo = likedComments[comment.commentId] || { liked: false, likeCount: 0 };
+            outputBox.appendChild(createCommentElement(comment.commentId, comment.commenter, comment.name, comment.idea, likedInfo.liked, likedInfo.likeCount));
+
+            // Reset the like count for each comment when the page is loaded
+            likedComments[comment.commentId] = {
+                liked: likedInfo.liked,
+                likeCount: 0
+            };
+        });
+
+        // Save the updated likedComments to local storage
+        localStorage.setItem("likedComments", JSON.stringify(likedComments));
+    });
+
+    // Listen for the form submission
+    form.addEventListener("submit", function (event) {
+        event.preventDefault(); // Prevent the default form submission behavior
+
+        // Get the values from the form
+        const name = document.getElementById("name").value;
+        const idea = document.getElementById("idea").value;
+
+        // Get the current user (you may replace this with your authentication logic)
+        const commenter = getCurrentUser();
+
+        // Create a new comment element with the like button and delete button
+        const commentId = Date.now(); // Unique identifier for the comment
+        const commentElement = createCommentElement(commentId, commenter, name, idea, false, 0);
+
+        // Add the new comment to the top of the output box
+        outputBox.insertBefore(commentElement, outputBox.firstChild);
+
+        // Clear the input fields
+        document.getElementById("name").value = "";
+        document.getElementById("idea").value = "";
+
+        // Save comments to localStorage
+        const existingComments = JSON.parse(localStorage.getItem("comments")) || [];
+        const newComments = [
+            ...existingComments,
+            { commentId, commenter, name, idea }
+        ];
+        localStorage.setItem("comments", JSON.stringify(newComments));
+    });
+</script>
+
+
+
+
+
+</body>
+</html>
